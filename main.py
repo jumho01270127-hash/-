@@ -6,3 +6,4 @@ if st.button('인사생성'):
   st.info(name+'안녕하시기')
   st.warning(menu+'을(를) 종아하시기,나는 별로')
   st.error('반갑수다')
+  st.balloons()
