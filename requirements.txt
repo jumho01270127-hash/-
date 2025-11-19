@@ -2,3 +2,6 @@ streamlit
 folium
 streamlit-folium
 pandas
+plotly
+openpyxl
+pytz
