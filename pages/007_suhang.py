@@ -10,8 +10,8 @@ st.title("📈 제주특별자치도 외국인 관광객 현황 (월별)")
 
 # --- 데이터 로드 (루트의 CSV 우선, 실패시 /mnt/data fallback) ---
 CSV_FILENAMES = [
-    "제주특별자치도_외국인관광객현황_20250319.csv",           # 권장: 레포지토리 루트에 위치
-    "/mnt/data/제주특별자치도_외국인관광객현황_20250319.csv"   # 이전 세션/환경 경로 (fallback)
+    "../제주특별자치도_외국인관광객현황_20250319.csv",  # 루트 폴더에 있는 CSV 파일
+    "/mnt/data/제주특별자치도_외국인관광객현황_20250319.csv"
 ]
 
 df = None
@@ -22,7 +22,7 @@ for p in CSV_FILENAMES:
             df = pd.read_csv(p, encoding="cp949")
         except Exception:
             df = pd.read_csv(p, encoding="euc-kr")
-        st.sidebar.success(f"데이터 로드: {p}")
+        st.sidebar.success(f"데이터 로드 성공: {p}")
         break
     except FileNotFoundError:
         continue
@@ -31,31 +31,24 @@ for p in CSV_FILENAMES:
         continue
 
 if df is None:
-    st.error("CSV 파일을 찾을 수 없습니다. 레포지토리 루트에 `제주특별자치도_외국인관광객현황_20250319.csv` 를 업로드하세요.")
+    st.error("CSV 파일을 찾을 수 없습니다. 레포지토리 루트에 `제주특별자치도_외국인관광객현황_20250319.csv` 파일을 올려주세요.")
     st.stop()
 
 # --- 전처리 ---
-# 컬럼명 공백 정리
 df.columns = df.columns.str.strip()
 
-# '해당연월'을 datetime으로 변환 (기본 포맷: YYYY-MM)
 try:
     df['해당연월'] = pd.to_datetime(df['해당연월'].astype(str), format="%Y-%m")
 except Exception:
-    # fallback: 문자열로 두기
     df['해당연월'] = pd.to_datetime(df['해당연월'].astype(str), errors='coerce')
 
-# 방문국 컬럼 목록 자동 추출 (숫자형 컬럼만)
 num_cols = df.select_dtypes(include=['int64','float64']).columns.tolist()
-
 countries = [c for c in num_cols if c.lower() not in ('index',)]
 
-# 긴 형식으로 변환 (for plotting)
 df_long = df.melt(id_vars=['해당연월','관련부서','데이터기준일자'],
                   value_vars=countries,
                   var_name='국가', value_name='방문객수')
 
-# 시즌 정의 함수
 def month_to_season(m):
     if m in [12,1,2]:
         return "겨울"
@@ -77,7 +70,6 @@ selected_year = st.sidebar.selectbox("연도 선택", year_options, index=0)
 month_options = ["전체"] + [f"{m:02d}" for m in sorted(df_long['월'].unique())]
 selected_month = st.sidebar.selectbox("월 선택 (버튼으로 표시하려면 아래 '월 보기' 클릭)", month_options, index=0)
 
-# 시즌 버튼
 st.sidebar.markdown("### 시즌 선택")
 col1, col2, col3, col4 = st.sidebar.columns(4)
 season_selected = None
@@ -90,15 +82,12 @@ if col3.button("가을"):
 if col4.button("겨울"):
     season_selected = "겨울"
 
-# 월 보기 버튼
 show_month = st.sidebar.button("선택한 월 보기")
 
-# 국가 멀티셀렉트
 default_countries = ["중국", "일본", "대만", "홍콩"]
 available_countries = sorted(df_long['국가'].unique(), key=lambda x: x)
 selected_countries = st.sidebar.multiselect("국가 선택 (그래프)", default_countries, available_countries)
 
-# 집계 기준
 agg_option = st.sidebar.radio("집계 기준", ("월별 추세(라인)", "선택월 구성(파이/막대/선택)"))
 
 # --- 필터 적용 ---
@@ -122,10 +111,9 @@ colA.metric("표시된 총 방문객 수", f"{total_visitors:,}")
 colB.metric("표시된 국가 수", f"{unique_countries}")
 colC.metric("최다 방문 국가", f"{max_country} ({max_country_count:,})")
 
-# --- 메인 그래프 ---
+# --- 그래프 ---
 st.markdown("## 그래프")
 
-# 1) 선택 국가 월별 추세 (라인)
 if len(selected_countries) == 0:
     st.info("좌측에서 하나 이상의 국가를 선택하세요.")
 else:
@@ -135,10 +123,10 @@ else:
     fig_line.update_layout(legend_title_text='국가', hovermode='x unified')
     st.plotly_chart(fig_line, use_container_width=True)
 
-# 2) 전체 스택드 영역
 st.markdown("### 전체 구성(스택드 영역)")
 df_area = df_disp.groupby(['해당연월','국가'], as_index=False)['방문객수'].sum()
 df_pivot = df_area.pivot_table(index='해당연월', columns='국가', values='방문객수', fill_value=0)
+import plotly.graph_objects as go
 fig_area = go.Figure()
 for country in df_pivot.columns:
     fig_area.add_trace(go.Scatter(
@@ -148,7 +136,6 @@ for country in df_pivot.columns:
 fig_area.update_layout(title="국가별 누적/스택드 영역 (필터 적용 결과)", xaxis_title="월", yaxis_title="방문객수")
 st.plotly_chart(fig_area, use_container_width=True)
 
-# 3) 선택월 국가별 막대 / 순위 (show_month 또는 season 기준)
 if selected_month != "전체" and show_month:
     st.markdown(f"### {selected_year}년 {selected_month}월 방문객 국가별 분포")
     month_int = int(selected_month)
@@ -157,11 +144,9 @@ if selected_month != "전체" and show_month:
     fig_bar = px.bar(df_month_agg, x='국가', y='방문객수', title=f"{selected_year}-{selected_month} 국가별 방문객 수 (내림차순)")
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # Sunburst (국가 구성)
     fig_sun = px.sunburst(df_month_agg, path=['국가'], values='방문객수', title="국가별 비중 (Sunburst)")
     st.plotly_chart(fig_sun, use_container_width=True)
 
-# 4) 상위 국가 Top 10 (필터 기준)
 st.markdown("### 상위 방문국 Top 10 (현재 필터/범위 기준)")
 top_n = 10
 df_top = df_disp.groupby('국가', as_index=False)['방문객수'].sum().sort_values('방문객수', ascending=False).head(top_n)
@@ -170,11 +155,9 @@ fig_top.update_traces(texttemplate='%{text:,}', textposition='outside')
 fig_top.update_layout(uniformtext_minsize=8)
 st.plotly_chart(fig_top, use_container_width=True)
 
-# 5) 데이터 표
 with st.expander("데이터 표 보기 (필터 적용)"):
     st.dataframe(df_disp.sort_values(['해당연월','국가']).reset_index(drop=True), use_container_width=True)
 
-# --- 하단 안내 ---
 st.markdown("---")
 st.markdown("#### 사용법 & 배포")
 st.markdown("""
