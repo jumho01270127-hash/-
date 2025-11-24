@@ -3,7 +3,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from pathlib import Path
 
 st.set_page_config(page_title="제주 외국인 관광객 대시보드", layout="wide")
 
@@ -49,7 +48,6 @@ except Exception:
 # 방문국 컬럼 목록 자동 추출 (숫자형 컬럼만)
 num_cols = df.select_dtypes(include=['int64','float64']).columns.tolist()
 
-# 일부 데이터셋의 경우 '미국'이 ' 미국' 등 공백 포함될 수 있음 -> 이미 strip 했음
 countries = [c for c in num_cols if c.lower() not in ('index',)]
 
 # 긴 형식으로 변환 (for plotting)
@@ -57,7 +55,7 @@ df_long = df.melt(id_vars=['해당연월','관련부서','데이터기준일자'
                   value_vars=countries,
                   var_name='국가', value_name='방문객수')
 
-# 시즌 정의
+# 시즌 정의 함수
 def month_to_season(m):
     if m in [12,1,2]:
         return "겨울"
@@ -79,7 +77,7 @@ selected_year = st.sidebar.selectbox("연도 선택", year_options, index=0)
 month_options = ["전체"] + [f"{m:02d}" for m in sorted(df_long['월'].unique())]
 selected_month = st.sidebar.selectbox("월 선택 (버튼으로 표시하려면 아래 '월 보기' 클릭)", month_options, index=0)
 
-# 시즌 버튼 (요청: 버튼으로 선택하면 해당 계절별 방문자 수 표현)
+# 시즌 버튼
 st.sidebar.markdown("### 시즌 선택")
 col1, col2, col3, col4 = st.sidebar.columns(4)
 season_selected = None
@@ -92,11 +90,11 @@ if col3.button("가을"):
 if col4.button("겨울"):
     season_selected = "겨울"
 
-# 월 보기 버튼 (요청대로 버튼 사용)
+# 월 보기 버튼
 show_month = st.sidebar.button("선택한 월 보기")
 
 # 국가 멀티셀렉트
-default_countries = ["중국", "일본", "대만", "홍콩"]  # 기본 선택
+default_countries = ["중국", "일본", "대만", "홍콩"]
 available_countries = sorted(df_long['국가'].unique(), key=lambda x: x)
 selected_countries = st.sidebar.multiselect("국가 선택 (그래프)", default_countries, available_countries)
 
@@ -113,7 +111,7 @@ if selected_month != "전체" and show_month:
     month_int = int(selected_month)
     df_disp = df_disp[df_disp['월'] == month_int]
 
-# --- 레이아웃: 상단 요약 카드 ---
+# --- 상단 요약 카드 ---
 total_visitors = int(df_disp['방문객수'].sum())
 unique_countries = df_disp['국가'].nunique()
 max_country = df_disp.groupby('국가')['방문객수'].sum().idxmax()
@@ -124,10 +122,10 @@ colA.metric("표시된 총 방문객 수", f"{total_visitors:,}")
 colB.metric("표시된 국가 수", f"{unique_countries}")
 colC.metric("최다 방문 국가", f"{max_country} ({max_country_count:,})")
 
-# --- 메인: 플롯들 ---
+# --- 메인 그래프 ---
 st.markdown("## 그래프")
 
-# 1) 선택한 국가들의 월별 추세 (라인)
+# 1) 선택 국가 월별 추세 (라인)
 if len(selected_countries) == 0:
     st.info("좌측에서 하나 이상의 국가를 선택하세요.")
 else:
@@ -137,21 +135,20 @@ else:
     fig_line.update_layout(legend_title_text='국가', hovermode='x unified')
     st.plotly_chart(fig_line, use_container_width=True)
 
-# 2) 전체 스택드 영역 (모든 국가, 시즌/월 필터 적용된 것)
+# 2) 전체 스택드 영역
 st.markdown("### 전체 구성(스택드 영역)")
 df_area = df_disp.groupby(['해당연월','국가'], as_index=False)['방문객수'].sum()
-# pivot for stacked area
 df_pivot = df_area.pivot_table(index='해당연월', columns='국가', values='방문객수', fill_value=0)
 fig_area = go.Figure()
 for country in df_pivot.columns:
     fig_area.add_trace(go.Scatter(
-        x=df_pivot.index, y=df_pivot[country].cumsum() if False else df_pivot[country],
+        x=df_pivot.index, y=df_pivot[country],
         stackgroup='one', name=country, hoverinfo='x+y+name'
     ))
 fig_area.update_layout(title="국가별 누적/스택드 영역 (필터 적용 결과)", xaxis_title="월", yaxis_title="방문객수")
 st.plotly_chart(fig_area, use_container_width=True)
 
-# 3) 선택한 월의 국가별 막대 / 순위 (show_month 또는 season 기준)
+# 3) 선택월 국가별 막대 / 순위 (show_month 또는 season 기준)
 if selected_month != "전체" and show_month:
     st.markdown(f"### {selected_year}년 {selected_month}월 방문객 국가별 분포")
     month_int = int(selected_month)
@@ -164,7 +161,7 @@ if selected_month != "전체" and show_month:
     fig_sun = px.sunburst(df_month_agg, path=['국가'], values='방문객수', title="국가별 비중 (Sunburst)")
     st.plotly_chart(fig_sun, use_container_width=True)
 
-# 4) 상위 국가 탑N (전체/필터 기준)
+# 4) 상위 국가 Top 10 (필터 기준)
 st.markdown("### 상위 방문국 Top 10 (현재 필터/범위 기준)")
 top_n = 10
 df_top = df_disp.groupby('국가', as_index=False)['방문객수'].sum().sort_values('방문객수', ascending=False).head(top_n)
@@ -173,11 +170,11 @@ fig_top.update_traces(texttemplate='%{text:,}', textposition='outside')
 fig_top.update_layout(uniformtext_minsize=8)
 st.plotly_chart(fig_top, use_container_width=True)
 
-# 5) 데이터 테이블 (필터 적용된 상세 테이블)
+# 5) 데이터 표
 with st.expander("데이터 표 보기 (필터 적용)"):
     st.dataframe(df_disp.sort_values(['해당연월','국가']).reset_index(drop=True), use_container_width=True)
 
-# --- 하단: 다운로드 / 사용법 안내 ---
+# --- 하단 안내 ---
 st.markdown("---")
 st.markdown("#### 사용법 & 배포")
 st.markdown("""
@@ -189,4 +186,3 @@ st.markdown("""
 
 st.markdown("#### 문제 발생 시")
 st.markdown("- 인코딩 문제가 생기면 CSV를 UTF-8로 변환해서 업로드하세요.")
-- ```)
