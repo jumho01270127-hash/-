@@ -10,8 +10,8 @@ st.title("📈 제주특별자치도 외국인 관광객 현황 (월별)")
 
 # --- 데이터 로드 (루트의 CSV 우선, 실패시 /mnt/data fallback) ---
 CSV_FILENAMES = [
-    "../제주특별자치도_외국인관광객현황_20250319.csv",  # 루트 폴더에 있는 CSV 파일
-    "/mnt/data/제주특별자치도_외국인관광객현황_20250319.csv"
+    "../tour.csv",  # 루트 폴더에 있는 CSV 파일
+    "/mnt/tour.csv"
 ]
 
 df = None
