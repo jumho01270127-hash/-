@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 st.set_page_config(page_title="방문객 분석", layout="wide")
-
+st.title("📈 제주특별자치도 외국인 관광객 현황 (월별)")
 # ----------------------------------
 # 1. CSV 불러오기
 # ----------------------------------
