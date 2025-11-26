@@ -1,27 +1,22 @@
-# pages/07_제주_외국인관광객.py
 import os
 import streamlit as st
 import pandas as pd
 
-# --- pages 폴더 안의 현재 파일 기준 절대경로 계산 ---
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))   # pages/ 폴더 경로
-ROOT_DIR = os.path.dirname(CURRENT_DIR)                    # 상위 폴더 (repo 루트)
-CSV_PATH = os.path.join(ROOT_DIR, "tour.csv")              # 루트/tour.csv
+# --- 현재 파일 기준 절대 경로 설정 ---
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))  # pages/
+ROOT_DIR = os.path.dirname(CURRENT_DIR)                   # 루트
+CSV_PATH = os.path.join(ROOT_DIR, "tour.csv")
 
-st.sidebar.write(f"CSV 탐색 경로: {CSV_PATH}")
+st.sidebar.write(f"CSV 검사 경로: {CSV_PATH}")
 
-# --- CSV 로드 ---
+# --- UTF-8로 읽기 ---
 try:
-    try:
-        df = pd.read_csv(CSV_PATH, encoding="cp949")
-    except:
-        df = pd.read_csv(CSV_PATH, encoding="euc-kr")
-
-    st.sidebar.success(f"데이터 로드 성공: {CSV_PATH}")
-
+    df = pd.read_csv(CSV_PATH, encoding="utf-8-sig")
+    st.sidebar.success("데이터 로드 성공 (UTF-8)")
 except Exception as e:
-    st.error(f"CSV 파일을 찾을 수 없습니다.\n루트 폴더에 'tour.csv' 파일이 있는지 확인하세요.\n\n오류: {e}")
+    st.error(f"CSV를 읽는 중 오류 발생: {e}")
     st.stop()
+
 
 
 # --- 전처리 ---
