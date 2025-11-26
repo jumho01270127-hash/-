@@ -72,12 +72,21 @@ if col4.button("겨울"): season_selected = "겨울"
 show_month = st.sidebar.button("선택한 월 보기")
 
 default_countries = ["중국", "일본", "대만", "홍콩"]
-available_countries = sorted(df_long['국가'].unique())
+# 옵션 목록
+available_countries = df['국가'].unique().tolist()
+
+# 기본 선택 국가들
+default_countries = ["일본", "미국", "중국"]
+
+# 옵션에 없는 값은 자동으로 제거
+default_countries = [c for c in default_countries if c in available_countries]
+
 selected_countries = st.sidebar.multiselect(
     "국가 선택 (그래프)",
-    default_countries,
-    available_countries
+    available_countries,        # 옵션 목록
+    default=default_countries   # 안전하게 필터링된 기본값
 )
+
 
 # --- 필터 적용 ---
 df_disp = df_long[df_long['연도'] == selected_year].copy()
