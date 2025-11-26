@@ -1,27 +1,28 @@
 # pages/07_제주_외국인관광객.py
+import os
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 
-st.set_page_config(page_title="제주 외국인 관광객 대시보드", layout="wide")
+# --- pages 폴더 안의 현재 파일 기준 절대경로 계산 ---
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))   # pages/ 폴더 경로
+ROOT_DIR = os.path.dirname(CURRENT_DIR)                    # 상위 폴더 (repo 루트)
+CSV_PATH = os.path.join(ROOT_DIR, "tour.csv")              # 루트/tour.csv
 
-st.title("📈 제주특별자치도 外국인 관광객 현황 (월별)")
+st.sidebar.write(f"CSV 탐색 경로: {CSV_PATH}")
 
-# --- 데이터 로드 (pages → 상위 폴더의 CSV 읽기) ---
-CSV_PATH = "../tour.csv"   # pages 폴더 기준 상위 폴더
-
+# --- CSV 로드 ---
 try:
     try:
         df = pd.read_csv(CSV_PATH, encoding="cp949")
-    except Exception:
+    except:
         df = pd.read_csv(CSV_PATH, encoding="euc-kr")
 
     st.sidebar.success(f"데이터 로드 성공: {CSV_PATH}")
 
 except Exception as e:
-    st.error(f"CSV 파일을 찾을 수 없습니다.\n상위 폴더에 'tour.csv' 파일이 존재하는지 확인하세요.\n\n오류: {e}")
+    st.error(f"CSV 파일을 찾을 수 없습니다.\n루트 폴더에 'tour.csv' 파일이 있는지 확인하세요.\n\n오류: {e}")
     st.stop()
+
 
 # --- 전처리 ---
 df.columns = df.columns.str.strip()
