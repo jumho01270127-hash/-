@@ -19,8 +19,13 @@ except Exception as e:
 
 
 
-# --- 전처리 ---
+# --- 전처리 ---# 컬럼명 양쪽 공백 제거
 df.columns = df.columns.str.strip()
+
+# UTF-8 BOM 제거
+df.columns = df.columns.str.replace('\ufeff', '', regex=False)
+
+st.write("정리된 컬럼명:", df.columns.tolist())
 
 try:
     df['해당연월'] = pd.to_datetime(df['해당연월'].astype(str), format="%Y-%m")
